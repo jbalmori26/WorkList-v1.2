@@ -1,0 +1,15 @@
+{
+  "name": "worklistv1.1-main",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "server": "json-server db.json"
+  },
+  "dependencies": {
+    "json-server": "^1.0.0-beta.3"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
