@@ -29,7 +29,7 @@ addBtn.addEventListener("click", (e) => {
     const text = input.value.trim();
 
     if (text !== "") {
-        const id = Date.now().toString();
+        const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
         renderTask(text, false, id);
         saveTasksToLocalStorage(); 
         input.value = "";
