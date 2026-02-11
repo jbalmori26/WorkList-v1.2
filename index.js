@@ -1,26 +1,27 @@
-const API_URL = 'http://localhost:3000/tasks';
-
 const input = document.querySelector("input");
 const addBtn = document.querySelector(".btn-add");
 const ul = document.querySelector("ul");
 const empty = document.querySelector(".empty");
 
-document.addEventListener("DOMContentLoaded", async () => {
-    try {
-        const response = await fetch(API_URL);
-        const savedTasks = await response.json();
-        
-        if (savedTasks.length > 0) {
-            empty.style.display = "none";
-            savedTasks.forEach(task => {
-                renderTask(task.text, task.completed, task.id);
-            });
-        } else {
-            empty.style.display = "block";
-        }
-    } catch (error) {
-        console.error("Error cargando tareas iniciales:", error);
+// Counter elements
+const totalCounter = document.querySelector(".counter-total");
+const incompleteCounter = document.querySelector(".counter-incomplete");
+const completeCounter = document.querySelector(".counter-complete");
+
+// Load tasks from localStorage
+document.addEventListener("DOMContentLoaded", () => {
+    const savedTasks = getTasksFromLocalStorage();
+    
+    if (savedTasks.length > 0) {
+        empty.style.display = "none";
+        savedTasks.forEach(task => {
+            renderTask(task.text, task.completed, task.id);
+        });
+    } else {
+        empty.style.display = "block";
     }
+    
+    updateCounters();
 });
 
 addBtn.addEventListener("click", (e) => {
@@ -28,10 +29,12 @@ addBtn.addEventListener("click", (e) => {
     const text = input.value.trim();
 
     if (text !== "") {
-        renderTask(text, false);
-        saveTasks(); 
+        const id = Date.now().toString();
+        renderTask(text, false, id);
+        saveTasksToLocalStorage(); 
         input.value = "";
         checkEmpty();
+        updateCounters();
     }
 });
 
@@ -49,12 +52,10 @@ function renderTask(text, isCompleted, id = null) {
     const checkBtn = document.createElement("button");
     checkBtn.textContent = "✓";
     checkBtn.className = "btn-check";
-    checkBtn.onclick = async function() {
+    checkBtn.onclick = function() {
         p.classList.toggle("completed");
-        const isCompleted = p.classList.contains("completed");
-        if (li.dataset.id) {
-            await updateTaskStatus(li.dataset.id, isCompleted);
-        }
+        saveTasksToLocalStorage();
+        updateCounters();
     };
 
     const deleteBtn = document.createElement("button");
@@ -62,9 +63,9 @@ function renderTask(text, isCompleted, id = null) {
     deleteBtn.className = "btn-delete";
     deleteBtn.onclick = function() {
         li.remove();
-        saveTasks(); 
+        saveTasksToLocalStorage(); 
         checkEmpty();
-        removeTask(li.dataset.id);
+        updateCounters();
     };
 
     li.appendChild(checkBtn);
@@ -73,48 +74,46 @@ function renderTask(text, isCompleted, id = null) {
     ul.appendChild(li);
 }
 
-async function saveTasks() {
+// LocalStorage functions
+function getTasksFromLocalStorage() {
+    const tasks = localStorage.getItem('tasks');
+    return tasks ? JSON.parse(tasks) : [];
+}
+
+function saveTasksToLocalStorage() {
     const items = document.querySelectorAll("li");
+    const tasks = [];
 
-    for (const li of items) {
-        if (li.dataset.id) continue; 
-
+    items.forEach(li => {
         const task = {
+            id: li.dataset.id,
             text: li.querySelector("p").textContent,
             completed: li.querySelector("p").classList.contains("completed")
         };
+        tasks.push(task);
+    });
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(task)
-        });
-
-        const data = await response.json();
-        li.dataset.id = data.id; 
-    }
+    localStorage.setItem('tasks', JSON.stringify(tasks));
 }
 
-async function updateTaskStatus(id, completed) {
-    const url = `${API_URL}/${id}`;
-    try {
-        const response = await fetch(url, {
-            method: 'PATCH', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ completed: completed })
-        });
+// Update counters
+function updateCounters() {
+    const items = document.querySelectorAll("li");
+    const total = items.length;
+    let completed = 0;
+    let incomplete = 0;
 
-        if (!response.ok) {
-            throw new Error("Error al actualizar la tarea");
+    items.forEach(li => {
+        if (li.querySelector("p").classList.contains("completed")) {
+            completed++;
+        } else {
+            incomplete++;
         }
-    } catch (error) {
-        console.error("Hubo un problema:", error);
-    }
-}
+    });
 
-async function removeTask(id) {
-    const url = `${API_URL}/${id}`;
-    await fetch(url, {method: 'DELETE'});
+    if (totalCounter) totalCounter.textContent = total;
+    if (completeCounter) completeCounter.textContent = completed;
+    if (incompleteCounter) incompleteCounter.textContent = incomplete;
 }
 
 function checkEmpty() {
